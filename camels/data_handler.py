@@ -48,7 +48,7 @@ class DataHandler:
 
         return df.reset_index(drop=True)
     
-    def get_catchment_shape(self, station_id: str) -> dict:
+    def get_station_catchment_shape(self, station_id: str) -> dict:
         """
         Get the catchment shape data for the stations in GeoJSON format.
         
@@ -80,3 +80,19 @@ class DataHandler:
         catchment_geojson = json.loads(gdf.to_json())
 
         return catchment_geojson["features"][0]
+    
+    def get_all_stations_gauge_locations(self) -> dict:
+        """
+        Get the locations of all stations in GeoJSON format.
+        
+        """
+        # Construct the file path
+        file_path = os.path.join(self.data_directory, 'CAMELS_DE_catchment_boundaries/gauging_stations/CAMELS_DE_gauging_stations.gpkg')
+        
+        # Read the data from the file
+        gdf = gpd.read_file(file_path)
+
+        # Convert the geometry to EPSG:4326
+        gdf = gdf.to_crs(epsg=4326)
+
+        return json.loads(gdf.to_json())
