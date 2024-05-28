@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from camels.station import Station
 from camels.data_handler import DataHandler
 from camels.models import StationResponse
@@ -24,7 +25,7 @@ def get_station(station_id: str):
         raise HTTPException(status_code=404, detail=f"Topographic data for Station with id {station_id} not found")
     
     # get the catchment shape data for the station
-    catchment = data_handler.get_catchment_shape(station_id)
+    catchment = data_handler.get_station_catchment_shape(station_id)
 
     # initialize the station object
     station = Station(
@@ -42,6 +43,16 @@ def get_station(station_id: str):
     )
 
     return response
+
+@app.get("/all_stations/gauge_locations")
+def get_all_stations_gauge_locations():
+    try:
+        # get the geojson data for all stations
+        geojson_data = data_handler.get_all_stations_gauge_locations()
+        return JSONResponse(content=geojson_data)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="GeoJSON data for all stations not found (CAMELS_DE_gauging_stations.gpkg)")
+    
 
 if __name__ == '__main__':
     import uvicorn
