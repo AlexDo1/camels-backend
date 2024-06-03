@@ -1,11 +1,28 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from camels.station import Station
 from camels.data_handler import DataHandler
 from camels.models import StationResponse
 
 
 app = FastAPI()
+
+# Allow local frontend to connect from this origin
+origins = [
+    "http://localhost:3000", 
+]
+
+# Add CORS middleware to the app
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# initialize the data handler
 data_handler = DataHandler(data_directory="/app/data/camels_de/")
 
 @app.get("/stations/{station_id}", response_model=StationResponse)
