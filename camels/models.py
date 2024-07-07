@@ -27,7 +27,7 @@ class StationCatchmentGeometry(BaseModel):
 class StationLocationGeometry(BaseModel):
     type: str = "Feature"
     properties: Dict[str, str]
-    geometry: Dict[str, Union[str, List[List[List[float]]]]]
+    geometry: Dict[str, Union[str, List[float]]]
 
 
 class StationResponse(BaseModel):
