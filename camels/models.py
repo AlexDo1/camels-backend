@@ -1,27 +1,37 @@
 from pydantic import BaseModel
-from typing import List, Dict, Union, Optional
+from typing import List, Dict, Union
 
 
 class StationTimeseriesData(BaseModel):
     data: List[Dict]
 
 
-class StationMetadata(BaseModel):
-    station_id: str
-    provider_id: str
-    federal_state: str
-    location: Dict[str, float]
-    station_name: str
-    water_body_name: str
+# TODO: possibly more detailed, one model for each attribute type
+class StationCatchmentAttributes(BaseModel):
+    topographic: Dict
+    soil: Dict
+    landcover: Dict
+    hydrogeology: Dict
+    humaninfluence: Dict
+    climatic: Dict
+    hydrologic: Dict
+    simulation_benchmark: Dict
 
 
-class StationCatchment(BaseModel):
+class StationCatchmentGeometry(BaseModel):
+    type: str = "Feature"
+    properties: Dict[str, str]
+    geometry: Dict[str, Union[str, List[List[List[float]]]]]
+
+
+class StationLocationGeometry(BaseModel):
     type: str = "Feature"
     properties: Dict[str, str]
     geometry: Dict[str, Union[str, List[List[List[float]]]]]
 
 
 class StationResponse(BaseModel):
-    metadata: StationMetadata
     timeseries: StationTimeseriesData
-    catchment: StationCatchment
+    catchment_attributes: StationCatchmentAttributes
+    catchment_geometry: StationCatchmentGeometry
+    location_geometry: StationLocationGeometry
