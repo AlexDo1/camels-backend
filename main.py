@@ -1,8 +1,10 @@
+import json
+
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from camels.station import Station
-from camels.data_handler import DataHandler
+from camels_datasetloader import CAMELS_DE
+
 from camels.models import StationResponse
 
 
@@ -23,40 +25,45 @@ app.add_middleware(
 )
 
 # initialize the data handler
-data_handler = DataHandler(data_directory="/app/data/camels_de/")
+camels = CAMELS_DE()
 
-@app.get("/stations/{station_id}", response_model=StationResponse)
-def get_station(station_id: str):
+@app.get("/stations/{gauge_id}", response_model=StationResponse)
+def get_station(gauge_id: str):
     # get the hydrometerological timeseries data for the station
-    timeseries_data = data_handler.get_station_timeseries_data(station_id)
+    timeseries_data = camels.get_timeseries(gauge_id)
 
     # check response
-    if timeseries_data.empty:
-        raise HTTPException(status_code=404, detail=f"Timeseries data for Station with id {station_id} not found")
+    if not timeseries_data.empty:
+        timeseries_data = timeseries_data.to_dict(orient='records')
+    else:
+        raise HTTPException(status_code=404, detail=f"Timeseries data for Station with id {gauge_id} not found")
     
-    # get the topographic data for the station
-    topographic_data = data_handler.get_station_topographic_data(station_id)
+    # get the catchment attributes for the station
+    catchment_attributes = {}
 
-    # check response
-    if topographic_data.empty:
-        raise HTTPException(status_code=404, detail=f"Topographic data for Station with id {station_id} not found")
+    # get the topographic, soil, landcover, hydrogeology, humaninfluence, climatic, hydrologic, and simulation_benchmark attributes for the station
+    for attribute_type in ["topographic", "soil", "landcover", "hydrogeology", "humaninfluence", "climatic", "hydrologic", "simulation_benchmark"]:
+        print(attribute_type)
+        attributes = camels.get_attributes(attribute_type, gauge_id)
+        if not attributes.empty:
+            catchment_attributes[attribute_type] = attributes.to_dict(orient='records')[0]
+        else:
+            raise HTTPException(status_code=404, detail=f"{attribute_type} attributes data for Station with id {gauge_id} not found")
     
     # get the catchment shape data for the station
-    catchment = data_handler.get_station_catchment_shape(station_id)
+    station_catchment_geometry = camels.get_catchments_geometry(gauge_id)
+    station_catchment_geometry = json.loads(station_catchment_geometry.to_json(to_wgs84=True))
 
-    # initialize the station object
-    station = Station(
-        station_id, 
-        timeseries=timeseries_data.to_dict(orient='records'),
-        topographic_data=topographic_data.to_dict(orient='records')[0],
-        catchment=catchment
-    )
+    # get the station location
+    station_location_geometry = camels.get_stations_geometry(gauge_id)
+    station_location_geometry = json.loads(station_catchment_geometry.to_json(to_wgs84=True))
 
     # create the response
     response = StationResponse(
-        metadata=station.get_metadata(),
-        timeseries=station.get_timeseries(),
-        catchment=station.get_catchment()
+        timeseries=timeseries_data,
+        catchment_attributes=catchment_attributes,
+        catchment_geometry=station_catchment_geometry,
+        location_geometry=station_location_geometry
     )
 
     return response
@@ -65,10 +72,14 @@ def get_station(station_id: str):
 def get_all_stations_gauge_locations():
     try:
         # get the geojson data for all stations
-        geojson_data = data_handler.get_all_stations_gauge_locations()
-        return JSONResponse(content=geojson_data)
+        stations_location_geometry = camels.get_stations_geometry()
+
+        # convert the GeoPandas DataFrame to a GeoJSON
+        stations_location_geometry = stations_location_geometry
+
+        return JSONResponse(content=json.loads(stations_location_geometry.to_json(to_wgs84=True)))
     except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="GeoJSON data for all stations not found (CAMELS_DE_gauging_stations.gpkg)")
+        raise HTTPException(status_code=404, detail="GeoJSON data for all stations not found.")
     
 
 if __name__ == '__main__':
