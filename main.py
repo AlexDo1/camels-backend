@@ -56,7 +56,7 @@ def get_station(gauge_id: str):
 
     # get the station location
     station_location_geometry = camels.get_stations_geometry(gauge_id)
-    station_location_geometry = json.loads(station_catchment_geometry.to_json(to_wgs84=True))
+    station_location_geometry = json.loads(station_location_geometry.to_json(to_wgs84=True))
 
     # create the response
     response = StationResponse(
